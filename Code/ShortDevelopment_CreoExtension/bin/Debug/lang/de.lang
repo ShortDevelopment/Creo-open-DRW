@@ -1,0 +1,18 @@
+﻿#
+#
+DRWOpen#Label
+*.drw Datei öffnen
+#
+#
+DRWOpen#Help
+Öffnet die Zugehörige *.drw Datei
+#
+#
+DRWOpen#Description
+Öffnet die Zugehörige *.drw Datei
+#
+#
+USER Error: %0s of code %1s at %2s
+Error: %0s of code %1s at %2s
+#
+#
