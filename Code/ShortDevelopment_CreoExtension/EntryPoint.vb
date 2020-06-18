@@ -168,7 +168,11 @@ Public Class EntryPoint
 
             Timer.Interval = 10
             AddHandler Timer.Tick, Sub()
-                                       CreoConnection.EventProcess()
+                                       Try
+                                           CreoConnection.EventProcess()
+                                       Catch ex As Exception
+                                           HandleException(ex, False)
+                                       End Try
                                    End Sub
             Timer.Enabled = True
 
@@ -230,7 +234,7 @@ Public Class EntryPoint
         Return True
     End Function
 
-    Protected Shared Sub HandleException(ex As Exception)
+    Protected Shared Sub HandleException(ex As Exception, Optional ShouldNotifyUser As Boolean = True)
         Console.ForegroundColor = ConsoleColor.Red
         Console.WriteLine($"{ex.GetType().Name} thrown:")
         Console.WriteLine(ex.Message)
@@ -246,7 +250,7 @@ Public Class EntryPoint
             'dialogoptions.MessageDialogType = EpfcMessageDialogType.EpfcMESSAGE_WARNING
             'Dim result = CreoConnection.Session.UIShowMessageDialog(ex.Message, dialogoptions)
             'Timer.Enabled = True
-            MessageBox.Show(ex.Message, $"Error: {ex.GetType().Name}", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1, CType(&H40000, MessageBoxOptions) Or MessageBoxOptions.DefaultDesktopOnly)
+            If ShouldNotifyUser Then MessageBox.Show(ex.Message, $"Error: {ex.GetType().Name}", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1, CType(&H40000, MessageBoxOptions) Or MessageBoxOptions.DefaultDesktopOnly)
         Catch : End Try
     End Sub
 
