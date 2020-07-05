@@ -1,4 +1,4 @@
-*.rb linguist-language=Java
+*.rb linguist-language=Visual Basic .NET
 
 # Replace any whitespace in the language name with hyphens:
 *.glyphs linguist-language=OpenStep-Property-List
