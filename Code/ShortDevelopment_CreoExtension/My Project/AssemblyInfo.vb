@@ -8,10 +8,10 @@ Imports System.Runtime.InteropServices
 
 ' Werte der Assemblyattribute überprüfen
 
-<Assembly: AssemblyTitle("ShortDevelopment_CreoExtension")>
+<Assembly: AssemblyTitle("Creo Extension")>
 <Assembly: AssemblyDescription("")>
-<Assembly: AssemblyCompany("")>
-<Assembly: AssemblyProduct("ShortDevelopment_CreoExtension")>
+<Assembly: AssemblyCompany("ShortDevelopment, KPFiMa-Medien")>
+<Assembly: AssemblyProduct("")>
 <Assembly: AssemblyCopyright("Copyright © Lukas Kurz, KPFiMa Medien 2020")>
 <Assembly: AssemblyTrademark("")>
 

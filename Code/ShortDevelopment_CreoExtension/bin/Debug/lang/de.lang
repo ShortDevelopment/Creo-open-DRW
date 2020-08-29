@@ -16,3 +16,31 @@ USER Error: %0s of code %1s at %2s
 Error: %0s of code %1s at %2s
 #
 #
+#
+#
+StormShield#Label
+Suchen Dialog
+#
+#
+StormShield#Help
+Öffnet den Suchen Dialog
+#
+#
+StormShield#Description
+Öffnet den Suchen Dialog
+#
+#
+#
+#
+WorkingDirectoryCommand#Label
+Arbeitsverzeichnis setzten
+#
+#
+WorkingDirectoryCommand#Help
+Setzt das Arbeitsverzeichnis auf den Ordner des aktuellen Modells
+#
+#
+WorkingDirectoryCommand#Description
+Setzt das Arbeitsverzeichnis auf den Ordner des aktuellen Modells
+#
+#

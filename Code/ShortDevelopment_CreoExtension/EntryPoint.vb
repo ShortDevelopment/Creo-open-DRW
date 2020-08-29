@@ -1,5 +1,9 @@
-﻿Imports System.IO
+﻿Imports System.ComponentModel
+Imports System.Configuration
+Imports System.IO
+Imports System.Reflection
 Imports System.Runtime.InteropServices
+Imports System.Windows.Threading
 Imports pfcls
 
 Public Class EntryPoint
@@ -7,34 +11,69 @@ Public Class EntryPoint
     Protected Shared CreoConnection As IpfcAsyncConnection = Nothing
     Protected Shared WithEvents Timer As New Timer()
 
+    Protected Shared ButtonCommand, SearchButtonCommand As IpfcUICommand
+    Protected Shared CommandListener, CommandListener2 As CreoCommandListener
+
+    Public Shared ReadOnly Property ThreadControl As Dispatcher = Dispatcher.CurrentDispatcher
+    Public Shared ReadOnly Property UIDispatcher As Dispatcher
+    Public Shared ReadOnly Property UIThread As New Threading.Thread(Sub()
+                                                                         _UIDispatcher = Dispatcher.CurrentDispatcher
+                                                                         Application.Run()
+                                                                         Console.WriteLine($"[{Threading.Thread.CurrentThread.Name}]: Has Message Loop: {Application.MessageLoop}")
+                                                                     End Sub)
+    Public Shared ReadOnly Property LogDir As String = Path.Combine(Application.StartupPath, "Logs")
     <STAThread>
     Public Shared Sub Main()
-        Dim commandline = My.Application.CommandLineArgs
-        If Not commandline.Count = 0 Then
-            For i As Integer = 0 To commandline.Count - 1
-                Dim cmd = commandline(i).Replace("/", "").Replace("-", "")
-                If cmd = "gui" Then
-                    Application.Run(New Form1())
-                    Exit Sub
-                End If
-            Next
+
+        Application.EnableVisualStyles()
+        Threading.Thread.CurrentThread.Name = "MainThread"
+
+        Dim CreateNewConsole As Boolean = False
+
+        If Not CreateNewConsole Then AttachConsole(-1)
+
+        Dim IsConsoleAttached As Boolean = If(GetConsoleWindow() = IntPtr.Zero, False, True)
+
+        Dim LogWriter As StreamWriter
+        If Not IsConsoleAttached Then
+            Try
+                If Not Directory.Exists(LogDir) Then Directory.CreateDirectory(LogDir)
+                LogWriter = New StreamWriter(File.Create(Path.Combine(LogDir, DateTime.Now.ToString("dd.MM.yyyy HH.mm.ss") + ".log")))
+                LogWriter.AutoFlush = True
+                LogWriter.WriteLine("Started Log")
+                'LogWriter.Flush()
+                Console.SetOut(LogWriter)
+                Console.SetError(LogWriter)
+            Catch : End Try
         End If
 
         _handler = Function(ByVal sig As CtrlType) As Boolean
                        Try
-                           CreoConnection.InterruptEventProcessing()
-                       Catch : End Try
-                       Try
-                           CreoConnection.Disconnect(1)
-                       Catch : End Try
+                           Timer.Enabled = False
+                           Timer.Stop()
+                       Catch ex As Exception
+
+                       End Try
+                       If Not CreoConnection Is Nothing AndAlso CreoConnection.IsRunning Then
+                           Try
+                               CreoConnection.InterruptEventProcessing()
+                           Catch : End Try
+                           Try
+                               Console.WriteLine("Disconnecting from Creo Parametric...")
+                               CreoConnection.Disconnect(0)
+                               Console.WriteLine("Sucessfully disconnected.")
+                           Catch ex As Exception
+                               Console.WriteLine("Could not disconnected!")
+                           End Try
+                       End If
                        Environment.[Exit](-1)
                        Return True
                    End Function
-        SetConsoleCtrlHandler(_handler, True)
+        If IsConsoleAttached Then SetConsoleCtrlHandler(_handler, True)
 
         Try
 
-            Console.Title = Application.ProductName
+            If IsConsoleAttached Then Console.Title = Application.ProductName
             Console.BackgroundColor = ConsoleColor.Black
 
             Try
@@ -75,72 +114,40 @@ Public Class EntryPoint
             Console.WriteLine()
 
             Console.WriteLine("Creating Button...")
-            Dim CommandListener As New CreoCommandListener()
+            CommandListener = New CreoCommandListener()
             AddHandler CommandListener.Command, Sub()
                                                     Try
-                                                        Dim model As IpfcModel = CreoConnection.Session.CurrentModel
+                                                        Dim model As CreoModel = New CreoModel(CType(CreoConnection.Session, IpfcBaseSession).CurrentModel)
 
-                                                        Console.WriteLine(model.Descr.GetFileName())
+                                                        Console.WriteLine(model.FileName)
 
-                                                        If IO.Path.GetExtension(model.Descr.GetFileName()) = ".asm" Then
+                                                        If IO.Path.GetExtension(model.FileName) = ".asm" Then
                                                             If CreoConnection.Session.CurrentSelectionBuffer.Contents Is Nothing Then
                                                                 'Throw New Exception("No Model Selected!")
                                                             Else
-                                                                model = CreoConnection.Session.CurrentSelectionBuffer.Contents(0).SelModel
+                                                                model = New CreoModel(CreoConnection.Session.CurrentSelectionBuffer.Contents(0).SelModel)
                                                             End If
 
                                                         End If
-                                                        If IO.Path.GetExtension(model.Descr.GetFileName()) = ".drw" Then
+                                                        If IO.Path.GetExtension(model.FileName) = ".drw" Then
                                                             If CreoConnection.Session.CurrentSelectionBuffer.Contents Is Nothing Then
                                                                 Throw New Exception("Do you think there should be any *.drw files belonging to a *.drw file ?!")
                                                             Else
-                                                                model = CreoConnection.Session.CurrentSelectionBuffer.Contents(0).SelModel
+                                                                model = New CreoModel(CreoConnection.Session.CurrentSelectionBuffer.Contents(0).SelModel)
                                                             End If
                                                         End If
 
-                                                        Dim path = $"{model.Descr.Device}:{IO.Path.Combine(model.Descr.Path, model.Descr.GetFileName())}"
+                                                        Dim NewestFile As CreoFile = My.Computer.FileSystem.GetFiles(model.Directory).AsParallel().Select(Function(x) New CreoFile(x)).Where(Function(x) x.ModelName.ToLower() = model.ModelName.ToLower() AndAlso x.Extension = ".drw").OrderBy(Function(x) x.Version).Reverse()(0)
 
-                                                        'Console.WriteLine($"path: {path}")
-
-                                                        Dim modelname = Split(model.Descr.GetFileName(), ".")(0)
-                                                        'Console.WriteLine(model.Descr.InstanceName)
-                                                        Dim pathnew As String
-                                                        Try
-                                                            pathnew = My.Computer.FileSystem.GetFiles(IO.Path.GetDirectoryName(path)).Where(Function(x) Split(IO.Path.GetFileName(x), ".")(0) = modelname AndAlso IO.Path.GetFileName(x).Contains(".drw") AndAlso Integer.TryParse(IO.Path.GetExtension(x).Replace(".", ""), Nothing)).OrderBy(Function(x)
-                                                                                                                                                                                                                                                                                                                                                   Dim extension = IO.Path.GetExtension(x).Replace(".", "")
-                                                                                                                                                                                                                                                                                                                                                   Return Int(extension)
-                                                                                                                                                                                                                                                                                                                                               End Function).Reverse()(0)
-
-                                                        Catch ex As Exception
-
-                                                        End Try
-                                                        path = path.Replace(".prt", ".drw").Replace(".asm", ".drw")
-                                                        Console.WriteLine(path)
-
-                                                        'If Not File.Exists(path) Then
-                                                        '    Throw New FileNotFoundException("No *.drw file for this model!")
-                                                        'End If
-
-                                                        Dim drwModelDescriptor = New CCpfcModelDescriptor().CreateFromFileName(path)
-
-                                                        If String.IsNullOrEmpty(pathnew) Then
-                                                            'drwModelDescriptor.FileVersion = CType(1, Int32)
+                                                        If NewestFile Is Nothing Then
+                                                            HandleException(New NullReferenceException("Keine Zeichnung gefunden!"))
                                                         Else
-                                                            Dim version = CType(Int(IO.Path.GetExtension(pathnew).Replace(".", "")), Int32)
-                                                            Console.WriteLine($"Version: {version}")
-                                                            drwModelDescriptor.FileVersion = version
+                                                            CreoConnection.Session.OpenFile(NewestFile)
                                                         End If
-                                                        Dim info = New CCpfcRetrieveModelOptions().Create()
-                                                        Dim loaded_model = CreoConnection.Session.RetrieveModelWithOpts(drwModelDescriptor, info)
-
-                                                        CreoConnection.Session.OpenFile(drwModelDescriptor)
-
-                                                        Dim window = CreoConnection.Session.GetModelWindow(loaded_model)
-                                                        window.Activate()
 
                                                         Console.WriteLine("Method executed sucessfully.")
                                                     Catch ex As NullReferenceException
-                                                        HandleException(New NullReferenceException("Kein Model / Keine Baugruppe geöffnet!"))
+                                                        HandleException(New NullReferenceException("Kein Model / Keine Baugruppe geöffnet!", ex))
                                                     Catch ex As COMException
                                                         If ex.Message = "pfcExceptions::XToolkitNotFound" Then
                                                             HandleException(New FileNotFoundException("Datei konnte nicht gefunden werden!" + vbNewLine + "Sind illegale Zeichen im Pfad enthalten?"))
@@ -152,22 +159,46 @@ Public Class EntryPoint
                                                     End Try
                                                 End Sub
 
-            Dim ButtonCommand As IpfcUICommand
+            'Dim ButtonCommand As IpfcUICommand
             Try
                 ButtonCommand = CreoConnection.Session.UICreateCommand("DRWOpen", CommandListener)
             Catch ex As Exception
                 ButtonCommand = CreoConnection.Session.UIGetCommand("DRWOpen")
                 Console.ForegroundColor = ConsoleColor.Green
-                Console.WriteLine("Command Already Exists!")
+                Console.WriteLine("Command Already Exists! Using FallBack!")
                 Console.ForegroundColor = ConsoleColor.White
+                CommandListener.IsFallBack = True
+                CType(ButtonCommand, IpfcActionSource).AddActionListener(CommandListener)
+                CType(ButtonCommand, IpfcActionSource).AddActionListener(New CreoButtonActivateListener())
             End Try
 
             ButtonCommand.Designate($"{LangDirectory}\de.lang", "DRWOpen Label", "DRWOpen Help", "DRWOpen Description")
-            Console.WriteLine("Button Created.")
 
+            Dim CommandListener3 = New CreoCommandListener()
+            AddHandler CommandListener3.Command, Sub()
+                                                     Try
+                                                         Dim dir = IO.Path.GetDirectoryName(CType(CreoConnection.Session, IpfcBaseSession).CurrentModel.Origin)
+                                                         CType(CreoConnection.Session, IpfcBaseSession).ChangeDirectory(dir)
+                                                     Catch ex As NullReferenceException
+                                                         HandleException(New NullReferenceException("Kein Model / Keine Baugruppe geöffnet!", ex))
+                                                     Catch ex As Exception
+                                                         HandleException(ex)
+                                                     End Try
+                                                 End Sub
+
+            Dim WorkingDirectoryCommand As IpfcUICommand
+            Try
+                WorkingDirectoryCommand = CreoConnection.Session.UICreateCommand("WorkingDirectoryCommand", CommandListener3)
+            Catch ex As Exception
+                WorkingDirectoryCommand = CreoConnection.Session.UIGetCommand("WorkingDirectoryCommand")
+            End Try
+            WorkingDirectoryCommand.Designate($"{LangDirectory}\de.lang", "WorkingDirectoryCommand Label", "WorkingDirectoryCommand Help", "WorkingDirectoryCommand Description")
+
+            Console.WriteLine("Buttons Created.")
 
             Timer.Interval = 10
             AddHandler Timer.Tick, Sub()
+                                       If Not CreoConnection.IsRunning Then Exit Sub
                                        Try
                                            CreoConnection.EventProcess()
                                        Catch ex As Exception
@@ -176,44 +207,89 @@ Public Class EntryPoint
                                    End Sub
             Timer.Enabled = True
 
-            'Console.WriteLine("Adding ActionListener...")
-            'CreoConnection.AddActionListener(New CreoConnectionHandler(CreoConnection))
-            'Console.WriteLine("ActionListener added.")
+            Console.WriteLine("Adding ActionListener...")
+            Dim ConnectionHandler = New CreoConnectionHandler()
+            AddHandler ConnectionHandler.CreoTerminated, Sub()
 
-            Console.WriteLine("Entering Message Loop...")
+                                                             Timer.Enabled = False
+                                                             Timer.Stop()
 
-            Console.WriteLine()
+                                                             Console.WriteLine()
+                                                             Console.WriteLine()
+                                                             Console.WriteLine("Preparing for Shutdown...")
+
+                                                             Try
+                                                                 UIDispatcher.Invoke(Sub()
+                                                                                         'If Not DialogInstance Is Nothing Then DialogInstance.Close()
+                                                                                         Application.ExitThread()
+                                                                                         'ThreadControl.Invoke(Sub() UIThread.Abort())
+                                                                                     End Sub)
+                                                             Catch ex As Exception
+                                                                 'HandleException(ex, False)
+                                                             End Try
+
+                                                             Try
+                                                                 CreoConnection.Disconnect(2)
+                                                             Catch ex As Exception
+
+                                                             End Try
+
+                                                             'Application.Exit()
+
+                                                             Threading.Thread.Sleep(100)
+
+                                                             Process.GetCurrentProcess().Kill()
+                                                         End Sub
+            CType(CreoConnection, IpfcActionSource).AddActionListener(ConnectionHandler)
+            Console.WriteLine("ActionListener added.")
+
+            Console.WriteLine("Starting UI Thread...")
+            UIThread.IsBackground = True
+            UIThread.Priority = Threading.ThreadPriority.AboveNormal
+            UIThread.Name = "UIThread"
+            UIThread.Start()
+            Console.WriteLine("UI Thread started.")
+
             Console.Beep()
-
+            Console.WriteLine("Entering Message Loop...")
+            Console.WriteLine()
             Application.Run()
 
         Catch ex As Exception
             HandleException(ex)
         Finally
-
-            If Not CreoConnection Is Nothing AndAlso CreoConnection.IsRunning Then
-                Try
-                    Console.WriteLine("Disconnecting from Creo Parametric...")
-                    CreoConnection.Disconnect(1)
-                    Console.WriteLine("Sucessfully disconnected.")
-                Catch ex As Exception
-                    Console.WriteLine("Could not disconnected!")
-                End Try
-            End If
-
-            Console.WriteLine("Press any Key to terminate...")
-            Console.ReadKey()
-
-            Console.WriteLine()
-            Console.WriteLine("Terminating self...")
+            Console.WriteLine("Goodbye!")
         End Try
     End Sub
+
+    <DllImport("user32", SetLastError:=True)>
+    Public Shared Sub SetForegroundWindow(handle As IntPtr) : End Sub
+
+    <DllImport("user32", SetLastError:=True)>
+    Public Shared Sub LockSetForegroundWindow(uLockCode As UInteger) : End Sub
+
+    <DllImport("kernel32", SetLastError:=True)>
+    Public Shared Sub FreeConsole() : End Sub
+    <DllImport("kernel32", SetLastError:=True)>
+    Public Shared Sub AttachConsole(pid As Integer) : End Sub
+    <DllImport("kernel32", SetLastError:=True)>
+    Public Shared Sub AllocConsole() : End Sub
+
+    <DllImport("kernel32.dll")>
+    Private Shared Function GetConsoleWindow() As IntPtr : End Function
+    Private Const StdOutputHandle As Integer = &HFFFFFFF5
+    <DllImport("kernel32.dll")>
+    Private Shared Function GetStdHandle(ByVal nStdHandle As Integer) As IntPtr : End Function
+    <DllImport("kernel32.dll")>
+    Private Shared Sub SetStdHandle(ByVal nStdHandle As Integer, ByVal handle As IntPtr) : End Sub
+
+    Protected Const LSFW_LOCK As UInteger = 1
+    Protected Const LSFW_UNLOCK As UInteger = 2
 
     <DllImport("Kernel32")>
     Private Shared Function SetConsoleCtrlHandler(ByVal handler As ConsoleEventHandler, ByVal add As Boolean) As Boolean : End Function
     Private Delegate Function ConsoleEventHandler(ByVal sig As CtrlType) As Boolean
     Shared _handler As ConsoleEventHandler
-
     Enum CtrlType
         CTRL_C_EVENT = 0
         CTRL_BREAK_EVENT = 1
@@ -221,8 +297,13 @@ Public Class EntryPoint
         CTRL_LOGOFF_EVENT = 5
         CTRL_SHUTDOWN_EVENT = 6
     End Enum
-
     Private Shared Function Handler(ByVal sig As CtrlType) As Boolean
+        Try
+            CType(ButtonCommand, IpfcActionSource).RemoveActionListener(CommandListener)
+            CType(SearchButtonCommand, IpfcActionSource).RemoveActionListener(CommandListener2)
+        Catch ex As Exception
+
+        End Try
         Try
             CreoConnection.InterruptEventProcessing()
         Catch : End Try
@@ -234,7 +315,7 @@ Public Class EntryPoint
         Return True
     End Function
 
-    Protected Shared Sub HandleException(ex As Exception, Optional ShouldNotifyUser As Boolean = True)
+    Public Shared Sub HandleException(ex As Exception, Optional ShouldNotifyUser As Boolean = True)
         Console.ForegroundColor = ConsoleColor.Red
         Console.WriteLine($"{ex.GetType().Name} thrown:")
         Console.WriteLine(ex.Message)
@@ -255,8 +336,8 @@ Public Class EntryPoint
     End Sub
 
     Public Class CreoCommandListener
-        Implements IpfcUICommandActionListener, ICIPClientObject
-
+        Implements IpfcUICommandActionListener, IpfcUICommandBracketListener, IpfcActionListener, ICIPClientObject
+        Public Property IsFallBack As Boolean
         Public Event Command()
         Public Sub OnCommand() Implements IpfcUICommandActionListener.OnCommand
             Console.WriteLine("Button was pressed!")
@@ -264,23 +345,40 @@ Public Class EntryPoint
         End Sub
 
         Public Function GetClientInterfaceName() As String Implements ICIPClientObject.GetClientInterfaceName
-            Return GetType(IpfcUICommandActionListener).Name
+            If IsFallBack Then
+                Return GetType(IpfcUICommandBracketListener).Name
+            Else
+                Return GetType(IpfcUICommandActionListener).Name
+            End If
+        End Function
+
+        Public Sub OnBeforeCommand() Implements IpfcUICommandBracketListener.OnBeforeCommand
+            Console.WriteLine("Button was pressed! (FallBack)")
+            RaiseEvent Command()
+        End Sub
+
+        Public Sub OnAfterCommand() Implements IpfcUICommandBracketListener.OnAfterCommand
+        End Sub
+    End Class
+    Public Class CreoButtonActivateListener
+        Implements IpfcUICommandAccessListener, IpfcActionListener, ICIPClientObject
+
+        Public Function GetClientInterfaceName() As String Implements ICIPClientObject.GetClientInterfaceName
+            Return GetType(IpfcUICommandAccessListener).Name
+        End Function
+
+        Public Function OnCommandAccess(_AllowErrorMessages As Boolean) As Integer Implements IpfcUICommandAccessListener.OnCommandAccess
+            Return EpfcCommandAccess.EpfcACCESS_AVAILABLE
         End Function
     End Class
+
     Public Class CreoConnectionHandler
         Implements IpfcAsyncActionListener, IpfcActionListener, ICIPClientObject
 
-        Public ReadOnly Property Connection As IpfcAsyncConnection
-        Public Sub New(Connection As IpfcAsyncConnection)
-            Me.Connection = Connection
-        End Sub
+        Public Event CreoTerminated()
 
         Public Sub OnTerminate(_Status As Integer) Implements IpfcAsyncActionListener.OnTerminate
-            Connection.InterruptEventProcessing()
-            Console.WriteLine()
-            Console.WriteLine()
-            Console.WriteLine("Creo Parametrics was terminated!")
-            Application.Exit()
+            RaiseEvent CreoTerminated()
         End Sub
 
         Public Function GetClientInterfaceName() As String Implements ICIPClientObject.GetClientInterfaceName
@@ -288,4 +386,17 @@ Public Class EntryPoint
         End Function
     End Class
 
+    Public Class CreoWindowHandle
+        Implements IWin32Window
+
+        <DllImport("user32")>
+        Private Shared Function GetForegroundWindow() As IntPtr : End Function
+        Public Sub New(window As IpfcWindow)
+            CreoWindow = window
+            window.Activate()
+            _Handle = GetForegroundWindow()
+        End Sub
+        Public ReadOnly Property CreoWindow As IpfcWindow
+        Public ReadOnly Property Handle As IntPtr Implements IWin32Window.Handle
+    End Class
 End Class

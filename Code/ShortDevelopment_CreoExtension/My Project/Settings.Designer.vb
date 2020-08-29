@@ -53,6 +53,114 @@ Namespace My
                 Return defaultInstance
             End Get
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property OnlyCreoExtensions() As Boolean
+            Get
+                Return CType(Me("OnlyCreoExtensions"),Boolean)
+            End Get
+            Set
+                Me("OnlyCreoExtensions") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute(".pdf")>  _
+        Public Property CustomFilter() As String
+            Get
+                Return CType(Me("CustomFilter"),String)
+            End Get
+            Set
+                Me("CustomFilter") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
+        Public Property CustomFilterEnabled() As Boolean
+            Get
+                Return CType(Me("CustomFilterEnabled"),Boolean)
+            End Get
+            Set
+                Me("CustomFilterEnabled") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
+        Public Property SetWorkingDirectory() As Boolean
+            Get
+                Return CType(Me("SetWorkingDirectory"),Boolean)
+            End Get
+            Set
+                Me("SetWorkingDirectory") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("True")>  _
+        Public Property Search_Method_UseFileSystem() As Boolean
+            Get
+                Return CType(Me("Search_Method_UseFileSystem"),Boolean)
+            End Get
+            Set
+                Me("Search_Method_UseFileSystem") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
+        Public Property Search_Method_IncludeDirs() As Boolean
+            Get
+                Return CType(Me("Search_Method_IncludeDirs"),Boolean)
+            End Get
+            Set
+                Me("Search_Method_IncludeDirs") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
+        Public Property Search_Method_UseWinSearchIndex() As Boolean
+            Get
+                Return CType(Me("Search_Method_UseWinSearchIndex"),Boolean)
+            End Get
+            Set
+                Me("Search_Method_UseWinSearchIndex") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("Y:\REP\")>  _
+        Public Property Search_SearchPaths() As String
+            Get
+                Return CType(Me("Search_SearchPaths"),String)
+            End Get
+            Set
+                Me("Search_SearchPaths") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("False")>  _
+        Public Property FilterMethod_UseCodeExpression() As Boolean
+            Get
+                Return CType(Me("FilterMethod_UseCodeExpression"),Boolean)
+            End Get
+            Set
+                Me("FilterMethod_UseCodeExpression") = value
+            End Set
+        End Property
     End Class
 End Namespace
 
@@ -64,9 +172,9 @@ Namespace My
     Friend Module MySettingsProperty
         
         <Global.System.ComponentModel.Design.HelpKeywordAttribute("My.Settings")>  _
-        Friend ReadOnly Property Settings() As Global.ShortDevelopment_CreoExtension.My.MySettings
+        Friend ReadOnly Property Settings() As Global.StormShield_CreoExtension.My.MySettings
             Get
-                Return Global.ShortDevelopment_CreoExtension.My.MySettings.Default
+                Return Global.StormShield_CreoExtension.My.MySettings.Default
             End Get
         End Property
     End Module
